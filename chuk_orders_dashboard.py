@@ -25,11 +25,12 @@ AUTH     = HTTPBasicAuth(
 
 def make_session():
     s = requests.Session()
-    retry = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-    s.mount("https://", HTTPAdapter(max_retries=retry))
+    # No retries on timeout — retries multiply wait time, just fail fast
+    s.mount("https://", HTTPAdapter(max_retries=0))
     return s
 
 SESSION = make_session()
+TIMEOUT = (8, 20)  # (connect, read)
 
 STATE_MAP = {
     "AP":"Andhra Pradesh","AR":"Arunachal Pradesh","AS":"Assam","BR":"Bihar",
@@ -57,7 +58,7 @@ STATUS_COLOR = {
 def fetch_orders(days_back: int, status_filter: str) -> pd.DataFrame:
     after = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%dT00:00:00")
     params = {
-        "per_page": 100,
+        "per_page": 50,  # smaller pages = faster individual requests
         "orderby": "date",
         "order": "desc",
         "after": after,
@@ -67,24 +68,26 @@ def fetch_orders(days_back: int, status_filter: str) -> pd.DataFrame:
 
     all_orders = []
     page = 1
-    while True:
+    MAX_PAGES = 20  # cap at 1000 orders
+    while page <= MAX_PAGES:
         params["page"] = page
         try:
-            r = SESSION.get(f"{WC_BASE}/orders", params=params, auth=AUTH, timeout=30)
+            r = SESSION.get(f"{WC_BASE}/orders", params=params, auth=AUTH, timeout=TIMEOUT)
         except requests.exceptions.Timeout:
-            st.warning(f"Page {page} timed out — showing {len(all_orders)} orders fetched so far.")
+            st.warning(f"Timeout on page {page} — showing {len(all_orders)} orders loaded so far.")
             break
         except requests.exceptions.RequestException as e:
-            st.error(f"API error: {e}")
+            st.error(f"API error on page {page}: {e}")
             break
         if r.status_code != 200:
+            st.error(f"WC API returned {r.status_code}")
             break
         batch = r.json()
         if not batch:
             break
         all_orders.extend(batch)
         total_pages = int(r.headers.get("X-WP-TotalPages", 1))
-        if page >= total_pages or len(batch) < 100:
+        if page >= total_pages or len(batch) < 50:
             break
         page += 1
 
