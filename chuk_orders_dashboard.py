@@ -198,7 +198,8 @@ TEST_MIN_TOTAL = 100.0  # orders below this (₹) treated as test orders
 @st.cache_data(ttl=180)
 def fetch_orders(days_back: int, status_filter: str) -> pd.DataFrame:
     after = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%dT00:00:00")
-    params = {"per_page": 50, "orderby": "date", "order": "desc", "after": after}
+    params = {"per_page": 50, "orderby": "date", "order": "desc",
+              "after": after, "_fields": WC_FIELDS}
     if status_filter != "all":
         params["status"] = status_filter
 
