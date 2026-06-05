@@ -1,0 +1,53 @@
+name: CHUK order watcher
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 min (GitHub may delay under load)
+  workflow_dispatch:          # manual run button
+
+# Allow the job to commit the updated state file back to the repo
+permissions:
+  contents: write
+
+concurrency:
+  group: order-watcher
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: Run watcher
+        env:
+          WC_USER:    ${{ secrets.WC_USER }}
+          WC_APP_KEY: ${{ secrets.WC_APP_KEY }}
+          SMTP_HOST:  ${{ secrets.SMTP_HOST }}
+          SMTP_PORT:  ${{ secrets.SMTP_PORT }}
+          SMTP_USER:  ${{ secrets.SMTP_USER }}
+          SMTP_PASS:  ${{ secrets.SMTP_PASS }}
+          MAIL_TO:    ${{ secrets.MAIL_TO }}
+          MAIL_FROM:  ${{ secrets.MAIL_FROM }}
+        run: python watcher.py
+
+      - name: Persist state
+        run: |
+          if [[ -n "$(git status --porcelain order_state.json)" ]]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add order_state.json
+            git commit -m "chore: update order watcher state [skip ci]"
+            git push
+          else
+            echo "No state change."
+          fi
