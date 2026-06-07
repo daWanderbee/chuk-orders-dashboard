@@ -24,6 +24,7 @@ import os
 import sys
 import ssl
 import json
+import time
 import smtplib
 from email.message import EmailMessage
 from datetime import datetime, timedelta
@@ -57,12 +58,14 @@ def env(name, default=None, required=False):
 def fetch_orders():
     auth = HTTPBasicAuth(env("WC_USER", required=True), env("WC_APP_KEY", required=True))
     after = (datetime.now() - timedelta(days=DAYS_BACK)).strftime("%Y-%m-%dT00:00:00")
+    # _cb busts chuk.in's LiteSpeed server-side REST cache so new/updated orders show
     params = {"per_page": 50, "orderby": "date", "order": "desc",
-              "after": after, "_fields": WC_FIELDS}
+              "after": after, "_fields": WC_FIELDS, "_cb": int(time.time())}
     out, page = [], 1
     while page <= 20:
         params["page"] = page
-        r = requests.get(f"{WC_BASE}/orders", params=params, auth=auth, timeout=TIMEOUT)
+        r = requests.get(f"{WC_BASE}/orders", params=params, auth=auth, timeout=TIMEOUT,
+                         headers={"Cache-Control": "no-cache"})
         r.raise_for_status()
         batch = r.json()
         if not batch:
