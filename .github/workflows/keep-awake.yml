@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Ping app
         run: |
-          code=$(curl -sSL -o /dev/null -w "%{http_code}" --max-time 60 \
-                 https://chukorders.streamlit.app/)
-          echo "HTTP $code"
+          # Streamlit health endpoint returns 200 with no auth/redirect; the hit
+          # alone is enough to wake the app. Don't follow redirects, don't fail.
+          code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 60 \
+                 https://chukorders.streamlit.app/_stcore/health || echo "000")
+          echo "health HTTP $code"

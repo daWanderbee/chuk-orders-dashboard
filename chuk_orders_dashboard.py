@@ -193,6 +193,35 @@ li[role="option"]:hover, li[aria-selected="true"][role="option"] {{
 
 st.markdown(build_css(P), unsafe_allow_html=True)
 
+# ── Password gate ─────────────────────────────────────────────────────────────
+# Lets the Streamlit app be PUBLIC (so keep-awake pings reach /_stcore/health)
+# while still protecting the order PII behind a password. Set app_password in
+# secrets; if unset, the gate is skipped (no lockout).
+def check_password():
+    if st.session_state.get("auth_ok"):
+        return
+    pw = st.secrets["app_password"] if "app_password" in st.secrets else None
+    if not pw:
+        return  # no password configured → open
+    st.markdown(
+        f'<div style="max-width:340px;margin:12vh auto 1rem;text-align:center">'
+        f'<img src="{CHUK_LOGO}" style="height:54px;margin-bottom:1rem"/>'
+        f'<div style="font-weight:700;color:{P["text"]}">Orders Dashboard</div></div>',
+        unsafe_allow_html=True,
+    )
+    c = st.columns([1, 2, 1])[1]
+    entered = c.text_input("Password", type="password", label_visibility="collapsed",
+                           placeholder="Enter password")
+    if entered:
+        if entered == pw:
+            st.session_state["auth_ok"] = True
+            st.rerun()
+        else:
+            c.error("Wrong password.")
+    st.stop()
+
+check_password()
+
 # Theme-aware styling for every Plotly figure
 def sketchify(fig):
     fig.update_layout(
