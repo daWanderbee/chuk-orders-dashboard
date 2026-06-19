@@ -32,15 +32,37 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 50_000);
   try {
-    const upstream = await fetch(url, { signal: ctrl.signal, cache: "no-store" });
+    // Optional cookie/header auth for gated invoice plugins (e.g. APIFW, which
+    // 302s anonymous requests to wp-login). Set INVOICE_COOKIE to a logged-in
+    // session cookie string if the endpoint needs it.
+    const headers: Record<string, string> = {};
+    if (process.env.INVOICE_COOKIE) headers["Cookie"] = process.env.INVOICE_COOKIE;
+
+    // manual redirect: a 3xx means the endpoint bounced us to a login page.
+    const upstream = await fetch(url, {
+      signal: ctrl.signal, cache: "no-store", redirect: "manual", headers,
+    });
+    if (upstream.status >= 300 && upstream.status < 400) {
+      return NextResponse.json(
+        { error: "invoice endpoint requires authentication (redirected to login)" },
+        { status: 502 },
+      );
+    }
     if (!upstream.ok) {
       return NextResponse.json(
         { error: `invoice source returned ${upstream.status}` },
         { status: 502 },
       );
     }
+    const ct = upstream.headers.get("content-type") || "";
+    if (!/pdf|octet-stream/i.test(ct)) {
+      // Got HTML (login page) instead of a PDF — treat as auth failure.
+      return NextResponse.json(
+        { error: "invoice endpoint did not return a PDF (auth or config issue)" },
+        { status: 502 },
+      );
+    }
     const buf = await upstream.arrayBuffer();
-    const ct = upstream.headers.get("content-type") || "application/pdf";
     return new NextResponse(buf, {
       status: 200,
       headers: {
