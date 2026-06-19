@@ -1,3 +1,27 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# env / secrets
+.env
+.env*.local
 .streamlit/secrets.toml
+
+# misc
+.DS_Store
+*.pem
+.vercel
+*.tsbuildinfo
+
+# python (watcher)
 __pycache__/
 *.pyc

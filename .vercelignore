@@ -1,0 +1,5 @@
+# Python watcher runs on GitHub Actions, not Vercel — keep it out of the deploy
+# so Vercel never tries to treat this as a Python project.
+watcher.py
+order_state.json
+.devcontainer

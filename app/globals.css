@@ -1,0 +1,69 @@
+@import "./assets/karbon.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: "Karbon", "Montserrat", -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* plum splash while the first fetch runs */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #942a45;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6rem;
+}
+.splash-logo {
+  height: 60px;
+  width: auto;
+  background: #fff2e0;
+  padding: 16px 24px;
+  border-radius: 16px;
+  animation: splashpulse 1.4s ease-in-out infinite;
+}
+.splash-ring {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #f3b343;
+  animation: splashspin 0.8s linear infinite;
+}
+@keyframes splashpulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@keyframes splashspin {
+  to { transform: rotate(360deg); }
+}
+
+/* status text colors */
+.status-pending { color: #f3b343; font-weight: 600; }
+.status-processing { color: #33a8c3; font-weight: 600; }
+.status-completed { color: #6fa52a; font-weight: 600; }
+.status-cancelled { color: #f46c62; font-weight: 600; }
+.status-on-hold { color: #cdb096; font-weight: 600; }
+.status-refunded { color: #e08a3c; font-weight: 600; }
+.status-failed { color: #942a45; font-weight: 600; }
+
+/* thin scrollbars inside the orders table */
+.tbl-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+.tbl-scroll::-webkit-scrollbar-thumb { background: rgba(148, 42, 69, 0.4); border-radius: 8px; }
