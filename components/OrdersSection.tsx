@@ -31,6 +31,10 @@ export function OrdersSection({
   const [stateSel, setStateSel] = useState("All");
   const [showContact, setShowContact] = useState(false);
   const [pending, setPending] = useState<Set<number>>(new Set());
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
+  const [savingMeta, setSavingMeta] = useState<Set<number>>(new Set());
+  const [savedFlash, setSavedFlash] = useState<Set<number>>(new Set());
+  const [invoicing, setInvoicing] = useState<Set<number>>(new Set());
 
   const view = useMemo(
     () => (grp === "All" ? sectionDf : sectionDf.filter((o) => o.statusGrp === grp)),
@@ -89,9 +93,57 @@ export function OrdersSection({
     }
   }
 
+  function setDraft(wcId: number, val: string) {
+    setDrafts((d) => ({ ...d, [wcId]: val }));
+  }
+
+  async function saveDispatch(o: OrderRow) {
+    const text = drafts[o.wcId] ?? o.dispatchFrom;
+    setSavingMeta((s) => new Set(s).add(o.wcId));
+    const res = await fetch(`/api/orders/${o.wcId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dispatchFrom: text }),
+    });
+    setSavingMeta((s) => {
+      const n = new Set(s); n.delete(o.wcId); return n;
+    });
+    if (res.ok) {
+      setSavedFlash((s) => new Set(s).add(o.wcId));
+      setTimeout(() => setSavedFlash((s) => {
+        const n = new Set(s); n.delete(o.wcId); return n;
+      }), 1800);
+      // Refresh so the saved value is canonical and the invoice picks it up.
+      onChanged();
+    } else {
+      alert(`Failed to save dispatch text for ${o.order}.`);
+    }
+  }
+
+  async function downloadInvoice(o: OrderRow) {
+    setInvoicing((s) => new Set(s).add(o.wcId));
+    try {
+      const res = await fetch(`/api/invoice/${o.wcId}`, { cache: "no-store" });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        alert(j.error || `Invoice download failed for ${o.order}.`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `chuk_invoice_${o.wcId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setInvoicing((s) => { const n = new Set(s); n.delete(o.wcId); return n; });
+    }
+  }
+
   function downloadCsv() {
     const cols = ["order", "date", "status", "type", "customer", "email", "phone",
-      "city", "state", "products", "total", "payment"] as const;
+      "city", "state", "products", "total", "payment", "dispatchFrom"] as const;
     const head = cols.join(",");
     const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
     const lines = view.map((o) => cols.map((c) => esc(String(o[c]))).join(","));
@@ -173,7 +225,8 @@ export function OrdersSection({
             <tr>
               {["✓ Done", "Order", "Date", "Status", "Customer",
                 ...(contactCols ? ["Email", "Phone"] : []),
-                "City", "State", "Products", "Total", "Payment"].map((h) => (
+                "City", "State", "Products", "Total", "Payment",
+                "Dispatch from", "Invoice"].map((h) => (
                 <th key={h} className="text-left px-3 py-2 whitespace-nowrap font-semibold"
                     style={{ color: p.tab_text }}>
                   {h}
@@ -207,6 +260,45 @@ export function OrdersSection({
                 <td className="px-3 py-2 max-w-[280px] truncate" title={o.products}>{o.products}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{inr(o.total)}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{o.payment}</td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      value={drafts[o.wcId] ?? o.dispatchFrom}
+                      onChange={(e) => setDraft(o.wcId, e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") saveDispatch(o); }}
+                      placeholder="—"
+                      className="rounded-md px-2 py-1 text-sm outline-none w-[180px]"
+                      style={{ background: p.app_bg, color: p.text, border: `1px solid ${p.df_border}` }}
+                    />
+                    {(() => {
+                      const dirty = (drafts[o.wcId] ?? o.dispatchFrom) !== o.dispatchFrom;
+                      const saving = savingMeta.has(o.wcId);
+                      const saved = savedFlash.has(o.wcId);
+                      return (
+                        <button
+                          onClick={() => saveDispatch(o)}
+                          disabled={!dirty || saving}
+                          className="rounded-md px-2 py-1 text-xs font-semibold disabled:opacity-40"
+                          style={{ background: p.btn_bg, color: p.btn_text }}
+                          title="Save dispatch text to the order"
+                        >
+                          {saving ? "…" : saved ? "✓" : "Save"}
+                        </button>
+                      );
+                    })()}
+                  </div>
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <button
+                    onClick={() => downloadInvoice(o)}
+                    disabled={invoicing.has(o.wcId)}
+                    className="rounded-full px-3 py-1 text-xs font-bold disabled:opacity-50"
+                    style={{ background: p.tab_bg, color: p.tab_text, border: `1px solid ${p.df_border}` }}
+                    title="Download the latest invoice PDF"
+                  >
+                    {invoicing.has(o.wcId) ? "…" : "Invoice ⬇"}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

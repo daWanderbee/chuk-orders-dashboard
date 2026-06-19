@@ -8,10 +8,13 @@ const WC_BASE = "https://chuk.in/wp-json/wc/v3";
 
 const WC_FIELDS = [
   "id", "number", "status", "date_created",
-  "billing", "line_items",
+  "billing", "shipping", "line_items",
   "total", "total_tax", "shipping_total",
-  "payment_method_title",
+  "payment_method_title", "meta_data",
 ].join(",");
+
+// Custom order meta holding the free-text dispatch-from / ship-to note.
+export const DISPATCH_META_KEY = "_chuk_dispatch_from";
 
 export const STATE_MAP: Record<string, string> = {
   AP: "Andhra Pradesh", AR: "Arunachal Pradesh", AS: "Assam", BR: "Bihar",
@@ -42,10 +45,12 @@ type WcBilling = {
   first_name?: string; last_name?: string; email?: string;
   phone?: string; city?: string; state?: string;
 };
+type WcMeta = { id?: number; key: string; value: unknown };
 type WcOrder = {
   id: number; number: string | number; status: string; date_created: string;
-  billing: WcBilling; line_items?: WcLineItem[];
+  billing: WcBilling; shipping?: WcBilling; line_items?: WcLineItem[];
   total?: string | number; payment_method_title?: string;
+  meta_data?: WcMeta[];
 };
 
 function authHeader(): string {
@@ -122,6 +127,8 @@ function toRow(o: WcOrder): OrderRow {
   const isTest = total < TEST_MIN_TOTAL || blob.includes("test");
   const stateCode = b.state ?? "";
   const city = (b.city ?? "").replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+  const dispatchMeta = (o.meta_data ?? []).find((m) => m.key === DISPATCH_META_KEY);
+  const dispatchFrom = dispatchMeta?.value == null ? "" : String(dispatchMeta.value);
 
   return {
     order: "#" + String(o.number),
@@ -140,17 +147,18 @@ function toRow(o: WcOrder): OrderRow {
     total,
     payment: o.payment_method_title ?? "",
     wcId: o.id,
+    dispatchFrom,
   };
 }
 
-export async function setOrderStatus(wcId: number, status: string): Promise<boolean> {
+async function putOrder(wcId: number, body: Record<string, unknown>): Promise<boolean> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
     const r = await fetch(`${WC_BASE}/orders/${wcId}`, {
       method: "PUT",
       headers: { Authorization: authHeader(), "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
       signal: ctrl.signal,
       cache: "no-store",
     });
@@ -160,4 +168,12 @@ export async function setOrderStatus(wcId: number, status: string): Promise<bool
   } finally {
     clearTimeout(t);
   }
+}
+
+export function setOrderStatus(wcId: number, status: string): Promise<boolean> {
+  return putOrder(wcId, { status });
+}
+
+export function setDispatchFrom(wcId: number, text: string): Promise<boolean> {
+  return putOrder(wcId, { meta_data: [{ key: DISPATCH_META_KEY, value: text }] });
 }

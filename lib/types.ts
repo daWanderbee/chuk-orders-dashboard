@@ -18,4 +18,5 @@ export type OrderRow = {
   total: number;
   payment: string;
   wcId: number;
+  dispatchFrom: string; // free-text ship-to / dispatch-from note (_chuk_dispatch_from)
 };
