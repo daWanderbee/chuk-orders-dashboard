@@ -260,14 +260,21 @@ export function OrdersSection({
                 <td className="px-3 py-2 max-w-[280px] truncate" title={o.products}>{o.products}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{inr(o.total)}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{o.payment}</td>
-                <td className="px-3 py-2 whitespace-nowrap">
-                  <div className="flex items-center gap-1.5">
-                    <input
+                <td className="px-3 py-2 align-top">
+                  <div className="flex items-start gap-1.5">
+                    <textarea
                       value={drafts[o.wcId] ?? o.dispatchFrom}
                       onChange={(e) => setDraft(o.wcId, e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") saveDispatch(o); }}
-                      placeholder="—"
-                      className="rounded-md px-2 py-1 text-sm outline-none w-[180px]"
+                      onKeyDown={(e) => {
+                        // Ctrl/Cmd+Enter saves; plain Enter inserts a newline
+                        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                          e.preventDefault();
+                          saveDispatch(o);
+                        }
+                      }}
+                      rows={3}
+                      placeholder={"Ship-to / dispatch address…\n(Ctrl+Enter to save)"}
+                      className="rounded-md px-2 py-1 text-sm outline-none w-[220px] resize-y leading-snug"
                       style={{ background: p.app_bg, color: p.text, border: `1px solid ${p.df_border}` }}
                     />
                     {(() => {
@@ -280,7 +287,7 @@ export function OrdersSection({
                           disabled={!dirty || saving}
                           className="rounded-md px-2 py-1 text-xs font-semibold disabled:opacity-40"
                           style={{ background: p.btn_bg, color: p.btn_text }}
-                          title="Save dispatch text to the order"
+                          title="Save dispatch address to the order (Ctrl+Enter)"
                         >
                           {saving ? "…" : saved ? "✓" : "Save"}
                         </button>

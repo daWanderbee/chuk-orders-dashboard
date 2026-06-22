@@ -8,6 +8,7 @@ import { CHUK_LOGO } from "@/app/assets/logo";
 import { KpiCard } from "./KpiCard";
 import { OrdersSection } from "./OrdersSection";
 import { Charts } from "./Charts";
+import { InstallButton } from "./InstallButton";
 
 const FAILED = new Set(["cancelled", "failed", "refunded"]);
 const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
@@ -161,8 +162,9 @@ export function Dashboard() {
           Updated: {new Date(lastRefresh).toLocaleTimeString("en-GB")}
         </span>
 
-        <div className="mt-auto">
-          <button onClick={logout} className="text-xs underline" style={{ color: p.muted }}>
+        <div className="mt-auto flex flex-col gap-3">
+          <InstallButton p={p} />
+          <button onClick={logout} className="text-xs underline self-start" style={{ color: p.muted }}>
             Log out
           </button>
         </div>
@@ -194,6 +196,7 @@ export function Dashboard() {
           >
             ↻
           </button>
+          <InstallButton p={p} />
         </div>
 
         {/* hero */}
