@@ -50,7 +50,7 @@ export function Charts({ p, df, dfRev }: { p: Palette; df: OrderRow[]; dfRev: Or
   for (const o of df) grpCounts.set(o.statusGrp, (grpCounts.get(o.statusGrp) ?? 0) + 1);
   const pie = [...grpCounts.entries()].map(([name, value]) => ({ name, value }));
 
-  // Revenue by type (excl. failed)
+  // Revenue by type (processing + completed only)
   const typeMap = new Map<string, { revenue: number; orders: number }>();
   for (const o of dfRev) {
     const t = typeMap.get(o.type) ?? { revenue: 0, orders: 0 };
@@ -111,7 +111,7 @@ export function Charts({ p, df, dfRev }: { p: Palette; df: OrderRow[]; dfRev: Or
           </PieChart>
         </ChartCard>
 
-        <ChartCard p={p} title="Revenue by Type (₹, excl. failed)" height={260}>
+        <ChartCard p={p} title="Revenue by Type (₹, processing + completed)" height={260}>
           <BarChart data={byType} margin={{ top: 16, right: 8, left: -8, bottom: 0 }}>
             <CartesianGrid stroke={grid} vertical={false} />
             <XAxis dataKey="type" tick={tick} axisLine={{ stroke: p.axis }} tickLine={false} />
@@ -128,7 +128,7 @@ export function Charts({ p, df, dfRev }: { p: Palette; df: OrderRow[]; dfRev: Or
         </ChartCard>
       </div>
 
-      <ChartCard p={p} title="Top States by Revenue (₹, excl. failed)" height={320}>
+      <ChartCard p={p} title="Top States by Revenue (₹, processing + completed)" height={320}>
         <BarChart data={states} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
           <CartesianGrid stroke={grid} horizontal={false} />
           <XAxis type="number" tick={tick} axisLine={false} tickLine={false} />
