@@ -10,7 +10,6 @@ import { OrdersSection } from "./OrdersSection";
 import { Charts } from "./Charts";
 import { InstallButton } from "./InstallButton";
 
-const FAILED = new Set(["cancelled", "failed", "refunded"]);
 const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 const DAY_OPTIONS = [7, 14, 30, 60, 90, 180, 365];
 
@@ -70,7 +69,10 @@ export function Dashboard() {
     () => (hideTests ? (raw ?? []).filter((o) => !o.isTest) : (raw ?? [])),
     [raw, hideTests],
   );
-  const dfRev = useMemo(() => df.filter((o) => !FAILED.has(o.status)), [df]);
+  const dfRev = useMemo(
+    () => df.filter((o) => o.statusGrp === "Processing" || o.statusGrp === "Completed"),
+    [df],
+  );
 
   const totalRev = dfRev.reduce((s, o) => s + o.total, 0);
   const processingN = df.filter((o) => o.statusGrp === "Processing").length;
@@ -229,7 +231,7 @@ export function Dashboard() {
             {/* overall KPIs */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
               <KpiCard p={p} value={df.length} label="Total Orders" />
-              <KpiCard p={p} value={inr(totalRev)} label="Revenue (excl. failed)" />
+              <KpiCard p={p} value={inr(totalRev)} label="Revenue (processing + completed)" />
               <KpiCard p={p} value={websiteN} label="Website Orders" />
               <KpiCard p={p} value={sampleN} label="Sample Kits" />
               <KpiCard p={p} value={processingN} label="Processing" />
