@@ -75,6 +75,8 @@ export function Dashboard() {
   );
 
   const totalRev = dfRev.reduce((s, o) => s + o.total, 0);
+  const webRev = dfRev.filter((o) => o.type === "Website Order").reduce((s, o) => s + o.total, 0);
+  const sampleRev = dfRev.filter((o) => o.type === "Sample Kit").reduce((s, o) => s + o.total, 0);
   const processingN = df.filter((o) => o.statusGrp === "Processing").length;
   const failedN = df.filter((o) => o.statusGrp === "Failed/Cancelled").length;
   const websiteN = df.filter((o) => o.type === "Website Order").length;
@@ -232,6 +234,8 @@ export function Dashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
               <KpiCard p={p} value={df.length} label="Total Orders" />
               <KpiCard p={p} value={inr(totalRev)} label="Revenue (processing + completed)" />
+              <KpiCard p={p} value={inr(webRev)} label="Website Revenue" />
+              <KpiCard p={p} value={inr(sampleRev)} label="Sample Kit Revenue" />
               <KpiCard p={p} value={websiteN} label="Website Orders" />
               <KpiCard p={p} value={sampleN} label="Sample Kits" />
               <KpiCard p={p} value={processingN} label="Processing" />
